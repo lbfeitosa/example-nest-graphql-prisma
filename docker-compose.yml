@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  app:
+    image: node:18-alpine
+    volumes:
+      - ./:/app:delegated
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/moises?schema=public
+      SERVICE_SYSTEM_API_KEY: 'teste'
+      FIREBASE_AUTH_EMULATOR_HOST: firebase:9099
+      FIRESTORE_EMULATOR_HOST: firebase:8080
+      PUBSUB_EMULATOR_HOST: firebase:8085
+      GOOGLE_CLOUD_PROJECT: 'moises-dev-emulator'
+      GCLOUD_PROJECT: moises-dev-emulator
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+    command: >
+      sh -c "npx prisma migrate dev && 
+               npm run start:dev"
+
+  firebase:
+    image: andreysenov/firebase-tools:11.16.0-node-lts
+    volumes:
+      - ./infrastructure/dev/firebase/.firebaserc:/home/node/.firebaserc
+      - ./infrastructure/dev/firebase/firebase.json:/home/node/firebase.json
+    working_dir: /home/node
+    command: firebase emulators:start
+
+  ## PS: remove postgres and "npx prisma migrate dev" when choose network moises-service-api
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: moises
+    ports:
+      - '5433:5432'
+    volumes:
+      - database-data:/var/lib/postgresql/data/
+
+volumes:
+  database-data:
+# networks:
+#   default:
+#     name: moises-service-api_default
+#     external: true
